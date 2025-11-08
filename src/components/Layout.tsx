@@ -44,6 +44,16 @@ export default function Layout({ children }: LayoutProps) {
                   Items
                 </Link>
                 <Link
+                  href="/vendors"
+                  className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                    isActive('/vendors')
+                      ? 'border-blue-500 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
+                >
+                  Vendors
+                </Link>
+                <Link
                   href="/incoming-stock"
                   className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
                     isActive('/incoming-stock')

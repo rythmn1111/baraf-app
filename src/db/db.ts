@@ -7,10 +7,22 @@ export interface Item {
   createdAt: Date;
 }
 
+export interface Vendor {
+  id?: number;
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  createdAt: Date;
+}
+
 export interface StockEntry {
   id?: number;
   itemId: number;
   itemName: string;
+  vendorId: number;
+  vendorName: string;
   purchasePrice: number;
   invoice: string;
   invoiceFile?: {
@@ -24,6 +36,7 @@ export interface StockEntry {
 
 export class StockDatabase extends Dexie {
   items!: Table<Item>;
+  vendors!: Table<Vendor>;
   stockEntries!: Table<StockEntry>;
 
   constructor() {
@@ -31,6 +44,11 @@ export class StockDatabase extends Dexie {
     this.version(1).stores({
       items: '++id, name, createdAt',
       stockEntries: '++id, itemId, itemName, invoice, createdAt',
+    });
+    this.version(2).stores({
+      items: '++id, name, createdAt',
+      vendors: '++id, name, createdAt',
+      stockEntries: '++id, itemId, itemName, vendorId, vendorName, invoice, createdAt',
     });
   }
 }

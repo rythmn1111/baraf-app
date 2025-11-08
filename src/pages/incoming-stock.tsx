@@ -5,12 +5,14 @@ import Link from 'next/link';
 
 export default function IncomingStock() {
   const [selectedItemId, setSelectedItemId] = useState<number | ''>('');
+  const [selectedVendorId, setSelectedVendorId] = useState<number | ''>('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [invoice, setInvoice] = useState('');
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
   const items = useLiveQuery(() => db.items.toArray());
+  const vendors = useLiveQuery(() => db.vendors.toArray());
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,10 +45,11 @@ export default function IncomingStock() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedItemId || !purchasePrice || !invoice || !quantity) return;
+    if (!selectedItemId || !selectedVendorId || !purchasePrice || !invoice || !quantity) return;
 
     const selectedItem = items?.find(item => item.id === selectedItemId);
-    if (!selectedItem) return;
+    const selectedVendor = vendors?.find(vendor => vendor.id === selectedVendorId);
+    if (!selectedItem || !selectedVendor) return;
 
     try {
       let invoiceFileData = undefined;
@@ -63,6 +66,8 @@ export default function IncomingStock() {
       await db.stockEntries.add({
         itemId: Number(selectedItemId),
         itemName: selectedItem.name,
+        vendorId: Number(selectedVendorId),
+        vendorName: selectedVendor.name,
         purchasePrice: parseFloat(purchasePrice),
         quantity: parseInt(quantity),
         invoice: invoice,
@@ -71,6 +76,7 @@ export default function IncomingStock() {
       });
 
       setSelectedItemId('');
+      setSelectedVendorId('');
       setPurchasePrice('');
       setQuantity('1');
       setInvoice('');
@@ -143,6 +149,31 @@ export default function IncomingStock() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label htmlFor="vendor" className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Vendor *
+                </label>
+                <select
+                  id="vendor"
+                  value={selectedVendorId}
+                  onChange={(e) => setSelectedVendorId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Choose a vendor...</option>
+                  {vendors && vendors.map((vendor) => (
+                    <option key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </option>
+                  ))}
+                </select>
+                {(!vendors || vendors.length === 0) && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    No vendors found. <Link href="/vendors" className="text-blue-600 hover:underline">Add a vendor first</Link>
+                  </p>
+                )}
               </div>
 
               <div>

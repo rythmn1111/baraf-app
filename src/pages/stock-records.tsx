@@ -17,7 +17,8 @@ export default function StockRecords() {
     return stockEntries.filter(
       (entry) =>
         entry.itemName.toLowerCase().includes(search) ||
-        entry.invoice.toLowerCase().includes(search)
+        entry.invoice.toLowerCase().includes(search) ||
+        (entry.vendorName && entry.vendorName.toLowerCase().includes(search))
     );
   }, [stockEntries, searchTerm]);
 
@@ -107,7 +108,7 @@ export default function StockRecords() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                placeholder="Search by item name or invoice number..."
+                placeholder="Search by item, vendor, or invoice number..."
               />
             </div>
           </div>
@@ -144,6 +145,9 @@ export default function StockRecords() {
                     Item Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vendor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -171,6 +175,9 @@ export default function StockRecords() {
                   <tr key={entry.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {entry.itemName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {entry.vendorName || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {entry.invoice}
