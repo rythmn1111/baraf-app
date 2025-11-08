@@ -10,6 +10,7 @@ export default function IncomingStock() {
   const [quantity, setQuantity] = useState('1');
   const [invoice, setInvoice] = useState('');
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
 
   const items = useLiveQuery(() => db.items.toArray());
   const vendors = useLiveQuery(() => db.vendors.toArray());
@@ -72,7 +73,7 @@ export default function IncomingStock() {
         quantity: parseInt(quantity),
         invoice: invoice,
         invoiceFile: invoiceFileData,
-        createdAt: new Date(),
+        createdAt: new Date(stockDate),
       });
 
       setSelectedItemId('');
@@ -81,6 +82,7 @@ export default function IncomingStock() {
       setQuantity('1');
       setInvoice('');
       setInvoiceFile(null);
+      setStockDate(new Date().toISOString().split('T')[0]);
       // Reset file input
       const fileInput = document.getElementById('invoiceFile') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
@@ -245,6 +247,20 @@ export default function IncomingStock() {
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="stockDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Stock Date *
+                </label>
+                <input
+                  type="date"
+                  id="stockDate"
+                  value={stockDate}
+                  onChange={(e) => setStockDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
               </div>
             </div>
 
