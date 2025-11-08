@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import Link from 'next/link';
+import { syncToGoogleSheets, isOnline } from '@/utils/googleSheets';
 
 export default function Home() {
   const [selectedItemId, setSelectedItemId] = useState<number | ''>('');
@@ -11,9 +12,27 @@ export default function Home() {
   const [invoice, setInvoice] = useState('');
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
+  const [online, setOnline] = useState(true);
 
   const items = useLiveQuery(() => db.items.toArray());
   const vendors = useLiveQuery(() => db.vendors.toArray());
+
+  useEffect(() => {
+    // Set initial online status
+    setOnline(isOnline());
+
+    // Listen for online/offline events
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,6 +83,7 @@ export default function Home() {
         };
       }
 
+      // Save to IndexedDB (local storage)
       await db.stockEntries.add({
         itemId: Number(selectedItemId),
         itemName: selectedItem.name,
@@ -76,6 +96,34 @@ export default function Home() {
         createdAt: new Date(stockDate),
       });
 
+      // Sync to Google Sheets if online
+      let syncMessage = '';
+      if (isOnline()) {
+        const syncResult = await syncToGoogleSheets({
+          stockDate: stockDate,
+          itemName: selectedItem.name,
+          itemDetails: {
+            description: selectedItem.description,
+          },
+          vendorName: selectedVendor.name,
+          vendorDetails: {
+            contactPerson: selectedVendor.contactPerson,
+            phone: selectedVendor.phone,
+            email: selectedVendor.email,
+            address: selectedVendor.address,
+          },
+          quantity: parseInt(quantity),
+          purchasePrice: parseFloat(purchasePrice),
+          invoice: invoice,
+        });
+
+        syncMessage = syncResult.success
+          ? '\n✓ Synced to Google Sheets!'
+          : '\n⚠ Saved locally (Google Sheets sync failed)';
+      } else {
+        syncMessage = '\n⚠ Saved locally (you are offline)';
+      }
+
       setSelectedItemId('');
       setSelectedVendorId('');
       setPurchasePrice('');
@@ -87,7 +135,7 @@ export default function Home() {
       const fileInput = document.getElementById('invoiceFile') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
-      alert('Stock entry added successfully!');
+      alert('Stock entry added successfully!' + syncMessage);
     } catch (error) {
       console.error('Failed to add stock entry:', error);
       alert('Failed to add stock entry. Please try again.');
@@ -96,7 +144,15 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Incoming Stock</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Incoming Stock</h1>
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${online ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-gray-600">
+            {online ? 'Online - Syncing to Google Sheets' : 'Offline - Saving locally'}
+          </span>
+        </div>
+      </div>
 
       {!items || items.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-6">

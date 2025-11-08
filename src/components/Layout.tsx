@@ -13,6 +13,13 @@ export default function Layout({ children }: LayoutProps) {
     return router.pathname === path;
   };
 
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      localStorage.removeItem('isAuthenticated');
+      router.push('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm">
@@ -64,6 +71,14 @@ export default function Layout({ children }: LayoutProps) {
                   Stock Records
                 </Link>
               </div>
+            </div>
+            <div className="flex items-center">
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
