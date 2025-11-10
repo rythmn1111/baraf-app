@@ -1,13 +1,38 @@
-import { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db/db';
+import { useState, useMemo, useEffect } from 'react';
+import { fetchStockEntries, deleteStockEntry, updateStockEntry, fetchItems, fetchVendors, type Item, type Vendor } from '@/utils/supabase';
 
 export default function StockRecords() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [stockEntries, setStockEntries] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingEntry, setEditingEntry] = useState<any>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
 
-  const stockEntries = useLiveQuery(() =>
-    db.stockEntries.orderBy('createdAt').reverse().toArray()
-  );
+  // Edit form state
+  const [editItemId, setEditItemId] = useState<number | ''>('');
+  const [editVendorId, setEditVendorId] = useState<number | ''>('');
+  const [editQuantity, setEditQuantity] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editInvoice, setEditInvoice] = useState('');
+  const [editStockDate, setEditStockDate] = useState('');
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    const [entriesData, itemsData, vendorsData] = await Promise.all([
+      fetchStockEntries(),
+      fetchItems(),
+      fetchVendors()
+    ]);
+    setStockEntries(entriesData);
+    setItems(itemsData);
+    setVendors(vendorsData);
+    setIsLoading(false);
+  };
 
   const filteredEntries = useMemo(() => {
     if (!stockEntries) return [];
@@ -22,52 +47,69 @@ export default function StockRecords() {
     );
   }, [stockEntries, searchTerm]);
 
+  const handleEdit = (entry: any) => {
+    setEditingEntry(entry);
+    setEditItemId(entry.itemId);
+    setEditVendorId(entry.vendorId);
+    setEditQuantity(entry.quantity.toString());
+    setEditPrice(entry.purchasePrice.toString());
+    setEditInvoice(entry.invoice);
+    setEditStockDate(entry.createdAt.split('T')[0]);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEntry(null);
+    setEditItemId('');
+    setEditVendorId('');
+    setEditQuantity('');
+    setEditPrice('');
+    setEditInvoice('');
+    setEditStockDate('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editItemId || !editVendorId || !editQuantity || !editPrice || !editInvoice) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const result = await updateStockEntry(editingEntry.id, {
+        item_id: Number(editItemId),
+        vendor_id: Number(editVendorId),
+        quantity: parseInt(editQuantity),
+        purchase_price: parseFloat(editPrice),
+        invoice: editInvoice,
+        stock_date: editStockDate,
+      });
+
+      if (result.success) {
+        alert('Stock entry updated successfully!');
+        handleCancelEdit();
+        await loadData();
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to update stock entry:', error);
+      alert('Failed to update stock entry. Please try again.');
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this stock entry?')) {
       try {
-        await db.stockEntries.delete(id);
+        const result = await deleteStockEntry(id);
+        if (result.success) {
+          alert('Stock entry deleted successfully!');
+          await loadData();
+        } else {
+          alert(result.message);
+        }
       } catch (error) {
         console.error('Failed to delete stock entry:', error);
         alert('Failed to delete stock entry. Please try again.');
       }
-    }
-  };
-
-  const handleDownloadInvoice = (entry: typeof filteredEntries[0]) => {
-    if (!entry.invoiceFile) return;
-
-    const link = document.createElement('a');
-    link.href = entry.invoiceFile.data;
-    link.download = entry.invoiceFile.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleViewInvoice = (entry: typeof filteredEntries[0]) => {
-    if (!entry.invoiceFile) return;
-
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write(`
-        <html>
-          <head>
-            <title>${entry.invoiceFile.name}</title>
-            <style>
-              body { margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f3f4f6; }
-              img { max-width: 100%; height: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-              embed { width: 100%; height: 100vh; }
-            </style>
-          </head>
-          <body>
-            ${entry.invoiceFile.type.startsWith('image/')
-              ? `<img src="${entry.invoiceFile.data}" alt="${entry.invoiceFile.name}" />`
-              : `<embed src="${entry.invoiceFile.data}" type="${entry.invoiceFile.type}" />`
-            }
-          </body>
-        </html>
-      `);
-      newWindow.document.close();
     }
   };
 
@@ -127,8 +169,157 @@ export default function StockRecords() {
         </div>
       )}
 
+      {/* Edit Modal */}
+      {editingEntry && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Edit Stock Entry</h2>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Item *
+                  </label>
+                  <select
+                    value={editItemId}
+                    onChange={(e) => setEditItemId(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Choose an item...</option>
+                    {items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Vendor *
+                  </label>
+                  <select
+                    value={editVendorId}
+                    onChange={(e) => setEditVendorId(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Choose a vendor...</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      value={editQuantity}
+                      onChange={(e) => setEditQuantity(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      step="0.01"
+                      min="0"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Invoice Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={editInvoice}
+                    onChange={(e) => setEditInvoice(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stock Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={editStockDate}
+                    onChange={(e) => setEditStockDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                {editQuantity && editPrice && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Total:</span>
+                      <span className="text-xl font-bold text-green-600">
+                        ₹{(parseFloat(editPrice) * parseInt(editQuantity)).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        {!stockEntries || stockEntries.length === 0 ? (
+        {isLoading ? (
+          <div className="p-6 text-center text-gray-500">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-2">Loading stock entries...</p>
+          </div>
+        ) : stockEntries.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No stock entries yet. Add your first stock entry to get started!
           </div>
@@ -149,9 +340,6 @@ export default function StockRecords() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Invoice File
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Quantity
@@ -183,27 +371,6 @@ export default function StockRecords() {
                       {entry.invoice}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entry.invoiceFile ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleViewInvoice(entry)}
-                            className="text-blue-600 hover:text-blue-900 underline"
-                          >
-                            View
-                          </button>
-                          <span className="text-gray-300">|</span>
-                          <button
-                            onClick={() => handleDownloadInvoice(entry)}
-                            className="text-green-600 hover:text-green-900 underline"
-                          >
-                            Download
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {entry.quantity}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -216,6 +383,12 @@ export default function StockRecords() {
                       {new Date(entry.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(entry)}
+                        className="text-blue-600 hover:text-blue-900 mr-4"
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => handleDelete(entry.id!)}
                         className="text-red-600 hover:text-red-900"

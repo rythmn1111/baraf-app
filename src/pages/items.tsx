@@ -1,28 +1,40 @@
-import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db/db';
+import { useState, useEffect } from 'react';
+import { fetchItems, createItem, deleteItem, type Item } from '@/utils/supabase';
 
 export default function Items() {
   const [itemName, setItemName] = useState('');
   const [itemDescription, setItemDescription] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [items, setItems] = useState<Item[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const items = useLiveQuery(() => db.items.orderBy('createdAt').reverse().toArray());
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    setIsLoading(true);
+    const data = await fetchItems();
+    setItems(data);
+    setIsLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim()) return;
 
     try {
-      await db.items.add({
-        name: itemName,
-        description: itemDescription,
-        createdAt: new Date(),
-      });
+      const result = await createItem(itemName, itemDescription || undefined);
 
-      setItemName('');
-      setItemDescription('');
-      setIsAdding(false);
+      if (result.success) {
+        setItemName('');
+        setItemDescription('');
+        setIsAdding(false);
+        alert('Item added successfully!');
+        await loadItems();
+      } else {
+        alert(result.message);
+      }
     } catch (error) {
       console.error('Failed to add item:', error);
       alert('Failed to add item. Please try again.');
@@ -32,7 +44,13 @@ export default function Items() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this item?')) {
       try {
-        await db.items.delete(id);
+        const result = await deleteItem(id);
+        if (result.success) {
+          alert('Item deleted successfully!');
+          await loadItems();
+        } else {
+          alert(result.message);
+        }
       } catch (error) {
         console.error('Failed to delete item:', error);
         alert('Failed to delete item. Please try again.');
@@ -96,7 +114,12 @@ export default function Items() {
       )}
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        {!items || items.length === 0 ? (
+        {isLoading ? (
+          <div className="p-6 text-center text-gray-500">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-2">Loading items...</p>
+          </div>
+        ) : items.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No items yet. Add your first item to get started!
           </div>

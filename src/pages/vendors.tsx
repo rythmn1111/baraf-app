@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db/db';
+import { useState, useEffect } from 'react';
+import { fetchVendors, createVendor, deleteVendor, type Vendor } from '@/utils/supabase';
 
 export default function Vendors() {
   const [vendorName, setVendorName] = useState('');
@@ -9,29 +8,45 @@ export default function Vendors() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const vendors = useLiveQuery(() => db.vendors.orderBy('createdAt').reverse().toArray());
+  useEffect(() => {
+    loadVendors();
+  }, []);
+
+  const loadVendors = async () => {
+    setIsLoading(true);
+    const data = await fetchVendors();
+    setVendors(data);
+    setIsLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vendorName.trim()) return;
 
     try {
-      await db.vendors.add({
+      const result = await createVendor({
         name: vendorName,
         contactPerson: contactPerson || undefined,
         phone: phone || undefined,
         email: email || undefined,
         address: address || undefined,
-        createdAt: new Date(),
       });
 
-      setVendorName('');
-      setContactPerson('');
-      setPhone('');
-      setEmail('');
-      setAddress('');
-      setIsAdding(false);
+      if (result.success) {
+        setVendorName('');
+        setContactPerson('');
+        setPhone('');
+        setEmail('');
+        setAddress('');
+        setIsAdding(false);
+        alert('Vendor added successfully!');
+        await loadVendors();
+      } else {
+        alert(result.message);
+      }
     } catch (error) {
       console.error('Failed to add vendor:', error);
       alert('Failed to add vendor. Please try again.');
@@ -41,7 +56,13 @@ export default function Vendors() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this vendor?')) {
       try {
-        await db.vendors.delete(id);
+        const result = await deleteVendor(id);
+        if (result.success) {
+          alert('Vendor deleted successfully!');
+          await loadVendors();
+        } else {
+          alert(result.message);
+        }
       } catch (error) {
         console.error('Failed to delete vendor:', error);
         alert('Failed to delete vendor. Please try again.');
@@ -146,7 +167,12 @@ export default function Vendors() {
       )}
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        {!vendors || vendors.length === 0 ? (
+        {isLoading ? (
+          <div className="p-6 text-center text-gray-500">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-2">Loading vendors...</p>
+          </div>
+        ) : vendors.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No vendors yet. Add your first vendor to get started!
           </div>
