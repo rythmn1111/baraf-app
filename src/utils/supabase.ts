@@ -133,7 +133,7 @@ export async function fetchVendors(): Promise<Vendor[]> {
 
 export async function createVendor(vendor: {
   name: string;
-  contact_person?: string;
+  contactPerson?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -143,7 +143,7 @@ export async function createVendor(vendor: {
       .from('vendors')
       .insert([{
         name: vendor.name,
-        contact_person: vendor.contact_person,
+        contact_person: vendor.contactPerson,
         phone: vendor.phone,
         email: vendor.email,
         address: vendor.address,
