@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchVendors, createVendor, deleteVendor, type Vendor } from '@/utils/supabase';
+import { fetchVendors, createVendor, deleteVendor, updateVendor, type Vendor } from '@/utils/supabase';
 
 export default function Vendors() {
   const [vendorName, setVendorName] = useState('');
@@ -10,6 +10,12 @@ export default function Vendors() {
   const [isAdding, setIsAdding] = useState(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editContactPerson, setEditContactPerson] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editAddress, setEditAddress] = useState('');
 
   useEffect(() => {
     loadVendors();
@@ -67,6 +73,52 @@ export default function Vendors() {
         console.error('Failed to delete vendor:', error);
         alert('Failed to delete vendor. Please try again.');
       }
+    }
+  };
+
+  const handleEdit = (vendor: Vendor) => {
+    setEditingVendor(vendor);
+    setEditName(vendor.name);
+    setEditContactPerson(vendor.contactPerson || '');
+    setEditPhone(vendor.phone || '');
+    setEditEmail(vendor.email || '');
+    setEditAddress(vendor.address || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingVendor(null);
+    setEditName('');
+    setEditContactPerson('');
+    setEditPhone('');
+    setEditEmail('');
+    setEditAddress('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim()) {
+      alert('Please enter a vendor name');
+      return;
+    }
+
+    try {
+      const result = await updateVendor(editingVendor!.id, {
+        name: editName,
+        contactPerson: editContactPerson || undefined,
+        phone: editPhone || undefined,
+        email: editEmail || undefined,
+        address: editAddress || undefined,
+      });
+
+      if (result.success) {
+        alert('Vendor updated successfully!');
+        handleCancelEdit();
+        await loadVendors();
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to update vendor:', error);
+      alert('Failed to update vendor. Please try again.');
     }
   };
 
@@ -166,6 +218,108 @@ export default function Vendors() {
         </div>
       )}
 
+      {/* Edit Modal */}
+      {editingVendor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Edit Vendor</h2>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Vendor Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter vendor name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contact Person
+                    </label>
+                    <input
+                      type="text"
+                      value={editContactPerson}
+                      onChange={(e) => setEditContactPerson(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter contact person name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address
+                  </label>
+                  <textarea
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter vendor address (optional)"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white shadow rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="p-6 text-center text-gray-500">
@@ -226,6 +380,12 @@ export default function Vendors() {
                       {new Date(vendor.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(vendor)}
+                        className="text-blue-600 hover:text-blue-900 mr-4"
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => handleDelete(vendor.id!)}
                         className="text-red-600 hover:text-red-900"

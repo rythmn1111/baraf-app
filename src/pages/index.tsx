@@ -7,15 +7,18 @@ interface LineItem {
   id: string;
   itemId: number | '';
   quantity: string;
+  unit: string;
   purchasePrice: string;
 }
+
+const UNITS = ['kg', 'g', 'liter', 'ml', 'pieces', 'dozens', 'boxes'];
 
 export default function Home() {
   const [selectedVendorId, setSelectedVendorId] = useState<number | ''>('');
   const [invoice, setInvoice] = useState('');
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: crypto.randomUUID(), itemId: '', quantity: '1', purchasePrice: '' }
+    { id: crypto.randomUUID(), itemId: '', quantity: '1', unit: 'kg', purchasePrice: '' }
   ]);
   const [items, setItems] = useState<Item[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -38,7 +41,7 @@ export default function Home() {
   };
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { id: crypto.randomUUID(), itemId: '', quantity: '1', purchasePrice: '' }]);
+    setLineItems([...lineItems, { id: crypto.randomUUID(), itemId: '', quantity: '1', unit: 'kg', purchasePrice: '' }]);
   };
 
   const removeLineItem = (id: string) => {
@@ -88,7 +91,8 @@ export default function Home() {
           item_id: Number(line.itemId),
           vendor_id: Number(selectedVendorId),
           purchase_price: parseFloat(line.purchasePrice),
-          quantity: parseInt(line.quantity),
+          quantity: parseFloat(line.quantity),
+          unit: line.unit,
           invoice: invoice,
           stock_date: stockDate,
         })
@@ -102,7 +106,7 @@ export default function Home() {
         setSelectedVendorId('');
         setInvoice('');
         setStockDate(new Date().toISOString().split('T')[0]);
-        setLineItems([{ id: crypto.randomUUID(), itemId: '', quantity: '1', purchasePrice: '' }]);
+        setLineItems([{ id: crypto.randomUUID(), itemId: '', quantity: '1', unit: 'kg', purchasePrice: '' }]);
 
         alert(`Successfully added ${results.length} stock ${results.length === 1 ? 'entry' : 'entries'}!`);
       } else {
@@ -245,7 +249,7 @@ export default function Home() {
                       />
                     </div>
 
-                    <div className="w-24">
+                    <div className="w-28">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Quantity *
                       </label>
@@ -254,9 +258,27 @@ export default function Home() {
                         value={line.quantity}
                         onChange={(e) => updateLineItem(line.id, 'quantity', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        min="1"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0.00"
                         required
                       />
+                    </div>
+
+                    <div className="w-24">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Unit *
+                      </label>
+                      <select
+                        value={line.unit}
+                        onChange={(e) => updateLineItem(line.id, 'unit', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        required
+                      >
+                        {UNITS.map(unit => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="w-32">
@@ -278,7 +300,7 @@ export default function Home() {
                     {line.quantity && line.purchasePrice && (
                       <div className="w-32 pt-6">
                         <div className="text-sm font-semibold text-gray-900">
-                          ₹{(parseFloat(line.purchasePrice) * parseInt(line.quantity)).toFixed(2)}
+                          ₹{(parseFloat(line.purchasePrice) * parseFloat(line.quantity)).toFixed(2)}
                         </div>
                       </div>
                     )}

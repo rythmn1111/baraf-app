@@ -29,6 +29,7 @@ export interface StockEntry {
   vendor_id: number;
   purchase_price: number;
   quantity: number;
+  unit: string;
   invoice: string;
   stock_date: string;
   created_at: string;
@@ -82,6 +83,35 @@ export async function createItem(
     return {
       success: false,
       message: error.message || 'Failed to create item.',
+    };
+  }
+}
+
+export async function updateItem(
+  id: number,
+  name: string,
+  description?: string
+): Promise<{ success: boolean; message: string; data?: Item }> {
+  try {
+    const { data, error } = await supabase
+      .from('items')
+      .update({ name, description })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      message: 'Item updated successfully!',
+      data,
+    };
+  } catch (error: any) {
+    console.error('Failed to update item:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to update item.',
     };
   }
 }
@@ -167,6 +197,46 @@ export async function createVendor(vendor: {
   }
 }
 
+export async function updateVendor(
+  id: number,
+  vendor: {
+    name: string;
+    contactPerson?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+  }
+): Promise<{ success: boolean; message: string; data?: Vendor }> {
+  try {
+    const { data, error } = await supabase
+      .from('vendors')
+      .update({
+        name: vendor.name,
+        contact_person: vendor.contactPerson,
+        phone: vendor.phone,
+        email: vendor.email,
+        address: vendor.address,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      message: 'Vendor updated successfully!',
+      data,
+    };
+  } catch (error: any) {
+    console.error('Failed to update vendor:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to update vendor.',
+    };
+  }
+}
+
 export async function deleteVendor(id: number): Promise<{ success: boolean; message: string }> {
   try {
     const { error } = await supabase.from('vendors').delete().eq('id', id);
@@ -219,7 +289,8 @@ export async function fetchStockEntries(): Promise<any[]> {
       vendorId: entry.vendor_id,
       vendorName: entry.vendors?.name || '',
       purchasePrice: parseFloat(entry.purchase_price),
-      quantity: entry.quantity,
+      quantity: parseFloat(entry.quantity),
+      unit: entry.unit || 'kg',
       invoice: entry.invoice,
       createdAt: entry.stock_date || entry.created_at,
     }));
@@ -236,6 +307,7 @@ export async function createStockEntry(entry: {
   vendor_id: number;
   purchase_price: number;
   quantity: number;
+  unit: string;
   invoice: string;
   stock_date: string;
 }): Promise<{ success: boolean; message: string; data?: StockEntry }> {
@@ -269,6 +341,7 @@ export async function updateStockEntry(
     vendor_id: number;
     purchase_price: number;
     quantity: number;
+    unit: string;
     invoice: string;
     stock_date: string;
   }

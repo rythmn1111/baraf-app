@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { fetchStockEntries, deleteStockEntry, updateStockEntry, fetchItems, fetchVendors, type Item, type Vendor } from '@/utils/supabase';
 import SearchableSelect from '@/components/SearchableSelect';
 
+const UNITS = ['kg', 'g', 'liter', 'ml', 'pieces', 'dozens', 'boxes'];
+
 export default function StockRecords() {
   const [searchTerm, setSearchTerm] = useState('');
   const [stockEntries, setStockEntries] = useState<any[]>([]);
@@ -14,6 +16,7 @@ export default function StockRecords() {
   const [editItemId, setEditItemId] = useState<number | ''>('');
   const [editVendorId, setEditVendorId] = useState<number | ''>('');
   const [editQuantity, setEditQuantity] = useState('');
+  const [editUnit, setEditUnit] = useState('kg');
   const [editPrice, setEditPrice] = useState('');
   const [editInvoice, setEditInvoice] = useState('');
   const [editStockDate, setEditStockDate] = useState('');
@@ -53,6 +56,7 @@ export default function StockRecords() {
     setEditItemId(entry.itemId);
     setEditVendorId(entry.vendorId);
     setEditQuantity(entry.quantity.toString());
+    setEditUnit(entry.unit || 'kg');
     setEditPrice(entry.purchasePrice.toString());
     setEditInvoice(entry.invoice);
     setEditStockDate(entry.createdAt.split('T')[0]);
@@ -63,6 +67,7 @@ export default function StockRecords() {
     setEditItemId('');
     setEditVendorId('');
     setEditQuantity('');
+    setEditUnit('kg');
     setEditPrice('');
     setEditInvoice('');
     setEditStockDate('');
@@ -78,7 +83,8 @@ export default function StockRecords() {
       const result = await updateStockEntry(editingEntry.id, {
         item_id: Number(editItemId),
         vendor_id: Number(editVendorId),
-        quantity: parseInt(editQuantity),
+        quantity: parseFloat(editQuantity),
+        unit: editUnit,
         purchase_price: parseFloat(editPrice),
         invoice: editInvoice,
         stock_date: editStockDate,
@@ -206,7 +212,7 @@ export default function StockRecords() {
                   required
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Quantity *
@@ -216,9 +222,26 @@ export default function StockRecords() {
                       value={editQuantity}
                       onChange={(e) => setEditQuantity(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="1"
+                      step="0.01"
+                      min="0.01"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Unit *
+                    </label>
+                    <select
+                      value={editUnit}
+                      onChange={(e) => setEditUnit(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      {UNITS.map(unit => (
+                        <option key={unit} value={unit}>{unit}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
@@ -326,6 +349,9 @@ export default function StockRecords() {
                     Quantity
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Unit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Unit Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -353,6 +379,9 @@ export default function StockRecords() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {entry.quantity}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {entry.unit || 'kg'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       ₹{entry.purchasePrice.toFixed(2)}
