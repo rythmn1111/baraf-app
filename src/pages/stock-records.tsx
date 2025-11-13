@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { fetchStockEntries, deleteStockEntry, updateStockEntry, fetchItems, fetchVendors, type Item, type Vendor } from '@/utils/supabase';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function StockRecords() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -187,43 +188,23 @@ export default function StockRecords() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Item *
-                  </label>
-                  <select
-                    value={editItemId}
-                    onChange={(e) => setEditItemId(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Choose an item...</option>
-                    {items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableSelect
+                  options={items.map(i => ({ id: i.id, name: i.name }))}
+                  value={editItemId}
+                  onChange={setEditItemId}
+                  label="Item"
+                  placeholder="Search items..."
+                  required
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Vendor *
-                  </label>
-                  <select
-                    value={editVendorId}
-                    onChange={(e) => setEditVendorId(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Choose a vendor...</option>
-                    {vendors.map((vendor) => (
-                      <option key={vendor.id} value={vendor.id}>
-                        {vendor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableSelect
+                  options={vendors.map(v => ({ id: v.id, name: v.name }))}
+                  value={editVendorId}
+                  onChange={setEditVendorId}
+                  label="Vendor"
+                  placeholder="Search vendors..."
+                  required
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchItems, fetchVendors, createStockEntry, type Item, type Vendor } from '@/utils/supabase';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface LineItem {
   id: string;
@@ -171,23 +172,14 @@ export default function Home() {
             {/* Common Fields */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-6 pb-6 border-b">
               <div>
-                <label htmlFor="vendor" className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Vendor *
-                </label>
-                <select
-                  id="vendor"
+                <SearchableSelect
+                  options={vendors.map(v => ({ id: v.id, name: v.name }))}
                   value={selectedVendorId}
-                  onChange={(e) => setSelectedVendorId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={setSelectedVendorId}
+                  label="Select Vendor"
+                  placeholder="Search vendors..."
                   required
-                >
-                  <option value="">Choose a vendor...</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </option>
-                  ))}
-                </select>
+                />
                 {vendors.length === 0 && (
                   <p className="mt-1 text-xs text-gray-500">
                     No vendors found. <Link href="/vendors" className="text-blue-600 hover:underline">Add a vendor first</Link>
@@ -242,22 +234,15 @@ export default function Home() {
                 {lineItems.map((line, index) => (
                   <div key={line.id} className="flex gap-3 items-start p-4 bg-gray-50 rounded-md">
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Item *
-                      </label>
-                      <select
+                      <SearchableSelect
+                        options={items.map(i => ({ id: i.id, name: i.name }))}
                         value={line.itemId}
-                        onChange={(e) => updateLineItem(line.id, 'itemId', e.target.value ? Number(e.target.value) : '')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        onChange={(value) => updateLineItem(line.id, 'itemId', value)}
+                        label="Item"
+                        placeholder="Search items..."
                         required
-                      >
-                        <option value="">Choose an item...</option>
-                        {items.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.name}
-                          </option>
-                        ))}
-                      </select>
+                        className="text-sm"
+                      />
                     </div>
 
                     <div className="w-24">
