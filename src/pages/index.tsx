@@ -58,7 +58,7 @@ export default function Home() {
 
   const calculateTotal = () => {
     return lineItems.reduce((sum, line) => {
-      const qty = parseInt(line.quantity) || 0;
+      const qty = parseFloat(line.quantity) || 0;
       const price = parseFloat(line.purchasePrice) || 0;
       return sum + (qty * price);
     }, 0);
